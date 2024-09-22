@@ -37,7 +37,7 @@ func (handler *UserLoginHandler) Handler(ctx *gin.Context) {
 		return
 	}
 
-	err = handler.JWTValidator.InitToken(ctx, &user.Id)
+	err = handler.JWTValidator.InitToken(ctx, &user.ID)
 
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
@@ -45,5 +45,4 @@ func (handler *UserLoginHandler) Handler(ctx *gin.Context) {
 	}
 
 	ctx.AbortWithStatus(http.StatusOK)
-	return
 }

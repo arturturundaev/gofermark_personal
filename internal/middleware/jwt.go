@@ -40,19 +40,19 @@ func (JWTValidator *JWTValidator) Handle(ctx *gin.Context) {
 		return
 	}
 
-	userId, errorValidateToken := JWTValidator.getUserIDFromToken(token)
+	userID, errorValidateToken := JWTValidator.getUserIDFromToken(token)
 
 	if errorValidateToken != nil {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, errorValidateToken)
 		return
 	}
 
-	if userId == nil {
+	if userID == nil {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, "")
 		return
 	}
 
-	userExists, err := JWTValidator.userRepository.UserExistsByID(*userId)
+	userExists, err := JWTValidator.userRepository.UserExistsByID(*userID)
 
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, "")
@@ -64,14 +64,14 @@ func (JWTValidator *JWTValidator) Handle(ctx *gin.Context) {
 		return
 	}
 
-	err = JWTValidator.InitToken(ctx, userId)
+	err = JWTValidator.InitToken(ctx, userID)
 
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, "")
 		return
 	}
 
-	ctx.Set(UserIDProperty, *userId)
+	ctx.Set(UserIDProperty, *userID)
 }
 
 func (JWTValidator *JWTValidator) getUserIDFromToken(tokenString string) (*uuid.UUID, error) {
@@ -94,12 +94,12 @@ func (JWTValidator *JWTValidator) getUserIDFromToken(tokenString string) (*uuid.
 	return &claims.UserID, nil
 }
 
-func (JWTValidator *JWTValidator) buildJWT(userId *uuid.UUID) (string, error) {
+func (JWTValidator *JWTValidator) buildJWT(userID *uuid.UUID) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TokenExp)),
 		},
-		UserID: *userId,
+		UserID: *userID,
 	})
 
 	tokenString, err := token.SignedString([]byte(SecretKey))
@@ -110,8 +110,8 @@ func (JWTValidator *JWTValidator) buildJWT(userId *uuid.UUID) (string, error) {
 	return tokenString, nil
 }
 
-func (JWTValidator *JWTValidator) InitToken(ctx *gin.Context, userId *uuid.UUID) error {
-	token, err := JWTValidator.buildJWT(userId)
+func (JWTValidator *JWTValidator) InitToken(ctx *gin.Context, userID *uuid.UUID) error {
+	token, err := JWTValidator.buildJWT(userID)
 
 	if err != nil {
 		return err

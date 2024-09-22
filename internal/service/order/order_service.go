@@ -19,15 +19,15 @@ func NewOrderService(orderRepository service.IOrderRepository, userRepository se
 	return &OrderService{orderRepository: orderRepository, userRepository: userRepository, loyalityRepository: loyalityRepository, logger: logger}
 }
 
-func (service *OrderService) Create(userId uuid.UUID, number string) error {
+func (service *OrderService) Create(userID uuid.UUID, number string) error {
 	now := time.Now()
-	err := service.orderRepository.CreateOrder(uuid.New(), userId, number, model.ORDER_STATUS_NEW, now, now, 0)
+	err := service.orderRepository.CreateOrder(uuid.New(), userID, number, model.OrderStatusNew, now, now, 0)
 
 	if err != nil {
 		return err
 	}
 
-	err = service.orderRepository.UpdateOrder(userId, number, "PROCESSING", 0)
+	err = service.orderRepository.UpdateOrder(userID, number, "PROCESSING", 0)
 	if err != nil {
 		return err
 	}
@@ -36,15 +36,15 @@ func (service *OrderService) Create(userId uuid.UUID, number string) error {
 		service.logger.Error("failed to get order info from loyalty system", zap.String("error", err.Error()))
 		return err
 	}
-	err = service.orderRepository.UpdateOrder(userId, orderInfo.Number, orderInfo.Status, orderInfo.Accrual)
+	err = service.orderRepository.UpdateOrder(userID, orderInfo.Number, orderInfo.Status, orderInfo.Accrual)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (service *OrderService) GetOrders(userId uuid.UUID) ([]model.Order, error) {
-	orders, err := service.orderRepository.GetOrders(userId)
+func (service *OrderService) GetOrders(userID uuid.UUID) ([]model.Order, error) {
+	orders, err := service.orderRepository.GetOrders(userID)
 
 	if err != nil {
 		return orders, err

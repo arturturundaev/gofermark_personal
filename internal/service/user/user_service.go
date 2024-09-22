@@ -1,6 +1,7 @@
 package user
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"gofermark_personal/internal/model"
 	"gofermark_personal/internal/service"
@@ -34,13 +35,21 @@ func (service *UserService) UserExists(login string) (bool, error) {
 func (service *UserService) Auth(login string, password string) (*model.User, error) {
 	user, err := service.repository.GetByLogin(login)
 
-	err = service.compareHashAndPassword([]byte(user.Password), password)
-
 	if err != nil {
 		return nil, err
 	}
 
-	return user, nil
+	if user != nil {
+		err = service.compareHashAndPassword([]byte(user.Password), password)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return user, nil
+	}
+
+	return nil, fmt.Errorf("something error")
 }
 
 func (service *UserService) hashPassword(password string) ([]byte, error) {

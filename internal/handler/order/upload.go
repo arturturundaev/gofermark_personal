@@ -37,7 +37,7 @@ func (handler *OrderUploadHandler) Handler(ctx *gin.Context) {
 		return
 	}
 
-	userID, err := helper.GetUserIdFromGin(ctx)
+	userID, err := helper.GetUserIDFromGin(ctx)
 	if err != nil {
 		handler.logger.Error("failed to read order number in create order request", zap.String("error", err.Error()))
 		ctx.AbortWithStatus(http.StatusBadRequest)

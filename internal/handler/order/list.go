@@ -18,7 +18,7 @@ func NewOrderListHandler(service *order.OrderService, logger *zap.Logger) *Order
 }
 
 func (handler *OrderListdHandler) Handle(ctx *gin.Context) {
-	userID, err := helper.GetUserIdFromGin(ctx)
+	userID, err := helper.GetUserIDFromGin(ctx)
 	if err != nil {
 		handler.logger.Error("failed to read order number in create order request", zap.String("error", err.Error()))
 		ctx.AbortWithStatus(http.StatusBadRequest)

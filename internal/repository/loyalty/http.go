@@ -8,28 +8,28 @@ import (
 	"net/http"
 )
 
-type LoyaltyHttpRepository struct {
+type LoyaltyHTTPRepository struct {
 	address string
 	http    *http.Client
 	logger  *zap.Logger
 }
 
-func NewLoyaltyHttpRepository(address string, http *http.Client, logger *zap.Logger) *LoyaltyHttpRepository {
-	return &LoyaltyHttpRepository{address: address, http: http, logger: logger}
+func NewLoyaltyHTTPRepository(address string, http *http.Client, logger *zap.Logger) *LoyaltyHTTPRepository {
+	return &LoyaltyHTTPRepository{address: address, http: http, logger: logger}
 }
 
-func (repository LoyaltyHttpRepository) GetOrderInfo(orderNumber string) (*model.LoyaltyOrderInfo, error) {
-	fullUrl := repository.address + "/api/orders/" + orderNumber
-	repository.logger.Info(fullUrl)
+func (repository LoyaltyHTTPRepository) GetOrderInfo(orderNumber string) (*model.LoyaltyOrderInfo, error) {
+	fullURL := repository.address + "/api/orders/" + orderNumber
+	repository.logger.Info(fullURL)
 
-	resp, err := repository.http.Get(fullUrl)
-	defer resp.Body.Close()
+	resp, err := repository.http.Get(fullURL)
 
 	if err != nil {
 		repository.logger.Error(err.Error())
 
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	var loyaltyOrderInfo model.LoyaltyOrderInfo
 	if err := json.NewDecoder(resp.Body).Decode(&loyaltyOrderInfo); err != nil {

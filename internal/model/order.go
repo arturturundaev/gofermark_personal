@@ -6,7 +6,7 @@ import (
 )
 
 type Order struct {
-	Id        uuid.UUID `db:"id"`
+	ID        uuid.UUID `db:"id"`
 	UserID    uuid.UUID `db:"user_id"`
 	Number    string    `db:"number"`
 	Status    string    `db:"status"`
@@ -15,4 +15,4 @@ type Order struct {
 	UpdatedAt time.Time `db:"updated_at"`
 }
 
-const ORDER_STATUS_NEW = "NEW"
+const OrderStatusNew = "NEW"

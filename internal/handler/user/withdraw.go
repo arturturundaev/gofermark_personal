@@ -32,7 +32,7 @@ func (handler *UserWithdrawHandler) Handler(ctx *gin.Context) {
 		return
 	}
 
-	userID, err := helper.GetUserIdFromGin(ctx)
+	userID, err := helper.GetUserIDFromGin(ctx)
 	if err != nil {
 		handler.logger.Error("failed to get balance", zap.String("error", err.Error()))
 		ctx.AbortWithStatus(http.StatusBadRequest)

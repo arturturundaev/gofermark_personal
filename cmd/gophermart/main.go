@@ -54,7 +54,7 @@ func main() {
 		initMigrations("file:////"+absPath+"/internal/repository/migration", userRepository.GetDB())
 	}
 
-	loyalityRepository := loyalty.NewLoyaltyHttpRepository(config.AccrualSystemUrl, http.DefaultClient, logger)
+	loyalityRepository := loyalty.NewLoyaltyHTTPRepository(config.AccrualSystemURL, http.DefaultClient, logger)
 	userService := user2.NewUserService(userRepository)
 	orderService := order2.NewOrderService(orderRepository, userRepository, loyalityRepository, logger)
 	JWTValidator := middleware.NewJWTValidator(userRepository)

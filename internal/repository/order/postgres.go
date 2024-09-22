@@ -27,7 +27,7 @@ func NewOrderRepository(dns string, logger *zap.Logger) (*OrderRepository, error
 	return &OrderRepository{db: db, logger: logger}, nil
 }
 
-func (repository *OrderRepository) CreateOrder(id uuid.UUID, userId uuid.UUID, number string, status string, createdAt time.Time, updatedAt time.Time, accrual float64) error {
+func (repository *OrderRepository) CreateOrder(id uuid.UUID, userID uuid.UUID, number string, status string, createdAt time.Time, updatedAt time.Time, accrual float64) error {
 	tx, err := repository.db.Beginx()
 	if err != nil {
 		repository.logger.Error("Failed open transaction", zap.String("error", err.Error()))
@@ -35,10 +35,10 @@ func (repository *OrderRepository) CreateOrder(id uuid.UUID, userId uuid.UUID, n
 	}
 	defer tx.Rollback()
 
-	var someUserId *uuid.UUID
+	var someUserID *uuid.UUID
 
 	err = tx.Get(
-		&someUserId,
+		&someUserID,
 		fmt.Sprintf(`SELECT user_id FROM %s WHERE number=$1;`, tableName),
 		number,
 	)
@@ -48,17 +48,17 @@ func (repository *OrderRepository) CreateOrder(id uuid.UUID, userId uuid.UUID, n
 		return err
 	}
 
-	if someUserId != nil && *someUserId != userId {
+	if someUserID != nil && *someUserID != userID {
 		return errors2.ErrConflict
 	}
 
-	if someUserId != nil {
+	if someUserID != nil {
 		return errors2.ErrExists
 	}
 
 	_, err = tx.Exec(fmt.Sprintf(`INSERT INTO %s (id, user_id, number, status, accrual, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`, tableName),
 		id,
-		userId,
+		userID,
 		number,
 		status,
 		accrual,
