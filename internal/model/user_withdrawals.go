@@ -9,6 +9,6 @@ type UserWithdrawals struct {
 	Id        uuid.UUID `db:"id"`
 	UserID    uuid.UUID `db:"user_id"`
 	Sum       float64   `db:"sum"`
-	Number    string    `db:"number"`
+	Number    string    `db:"number" json:"Order"`
 	CreatedAt time.Time `db:"created_at"`
 }

@@ -38,17 +38,17 @@ func (repository *OrderRepository) CreateOrder(id uuid.UUID, userId uuid.UUID, n
 	var someUserId *uuid.UUID
 
 	err = tx.Get(
-		someUserId,
+		&someUserId,
 		fmt.Sprintf(`SELECT user_id FROM %s WHERE number=$1;`, tableName),
 		number,
 	)
 
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		repository.logger.Error("failed get user from order", zap.String("error", err.Error()))
 		return err
 	}
 
-	if *someUserId != userId {
+	if someUserId != nil && *someUserId != userId {
 		return errors2.ErrConflict
 	}
 
@@ -90,7 +90,7 @@ func (repository *OrderRepository) GetOrder(number string) (*model.Order, error)
 
 func (repository *OrderRepository) GetOrders(userID uuid.UUID) ([]model.Order, error) {
 	var result []model.Order
-	err := repository.db.Get(&result, fmt.Sprintf(`SELECT number, status, accrual, date FROM %s WHERE userID=$1;`, tableName), userID)
+	err := repository.db.Select(&result, fmt.Sprintf(`SELECT  id, user_id, number, status, accrual, created_at, updated_at FROM %s WHERE user_id=$1;`, tableName), userID)
 	if err != nil {
 		repository.logger.Error("Failed get orders from Database", zap.String("error", err.Error()))
 		return nil, err
@@ -113,8 +113,9 @@ func (repository *OrderRepository) UpdateOrder(userID uuid.UUID, number string, 
 		return err
 	}
 
-	query := `INSERT INTO balance (userID, sum, withDrawn) Values ($1, $2, 0.0) ON CONFLICT (userID) DO UPDATE SET sum=balance.sum + EXCLUDED.sum`
-	_, err = tx.Exec(query, userID, accrual)
+	query := `INSERT INTO user_balance (id, user_id, sum, with_drawn) Values ($1, $2, $3, $4) ON CONFLICT (user_id) DO UPDATE SET sum=user_balance.sum + EXCLUDED.sum`
+	fmt.Println("!!!!!!!!!!!!!" + query + "!!!!!!!!!!!!!")
+	_, err = tx.Exec(query, uuid.New().String(), userID, accrual, 0)
 	if err != nil {
 		repository.logger.Error("Failed to update balance", zap.String("error", err.Error()))
 		return err

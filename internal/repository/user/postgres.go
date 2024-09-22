@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 	errors2 "gofermark_personal/internal/errors"
 	"gofermark_personal/internal/model"
+	"time"
 )
 
 const tableName = "users"
@@ -89,8 +90,8 @@ func (repository *UserRepository) GetDB() *sqlx.DB {
 func (repository *UserRepository) GetBalance(userID uuid.UUID) (*model.UserBalance, error) {
 	var result model.UserBalance
 	err := repository.db.Get(
-		result,
-		"SELECT sum, withDrawn FROM user_balance WHERE userID=$1", userID)
+		&result,
+		"SELECT id, user_id, sum, with_drawn FROM user_balance WHERE user_id=$1", userID)
 	if err != nil {
 		repository.logger.Error("Failed to get balance", zap.String("error", err.Error()))
 		return &result, err
@@ -106,7 +107,7 @@ func (repository *UserRepository) Withdraw(userID uuid.UUID, number string, sum 
 	}
 	defer tx.Rollback()
 
-	_, err = tx.Exec("UPDATE user_balance SET sum=sum-$1, withDrawn=withDrawn+$1 WHERE userID=$2", sum, userID)
+	_, err = tx.Exec("UPDATE user_balance SET sum=sum-$1, with_drawn=with_drawn+$1 WHERE user_id=$2", sum, userID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
@@ -116,7 +117,7 @@ func (repository *UserRepository) Withdraw(userID uuid.UUID, number string, sum 
 		return err
 	}
 
-	_, err = tx.Exec("INSERT INTO user_withdrawals (userID, number, sum, date) Values ($1, $2, $3, current_timestamp)", userID, number, sum)
+	_, err = tx.Exec("INSERT INTO user_withdrawals (id, user_id, number, sum, created_at) Values ($1, $2, $3, $4, $5)", uuid.New(), userID, number, sum, time.Now())
 	if err != nil {
 		repository.logger.Error("Failed to insert into withdrawals", zap.String("error", err.Error()))
 		return err
@@ -128,9 +129,9 @@ func (repository *UserRepository) Withdraw(userID uuid.UUID, number string, sum 
 func (repository *UserRepository) GetWithdrawals(userID uuid.UUID) ([]model.UserWithdrawals, error) {
 	var result []model.UserWithdrawals
 
-	err := repository.db.Get(
+	err := repository.db.Select(
 		&result,
-		`SELECT number, sum, date FROM user_withdrawals WHERE userID=$1`,
+		`SELECT id, user_id, sum, number, created_at FROM user_withdrawals WHERE user_id=$1`,
 		userID)
 	if err != nil {
 		repository.logger.Error("Failed to get withdrawals", zap.String("error", err.Error()))

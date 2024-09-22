@@ -27,6 +27,19 @@ func (service *OrderService) Create(userId uuid.UUID, number string) error {
 		return err
 	}
 
+	err = service.orderRepository.UpdateOrder(userId, number, "PROCESSING", 0)
+	if err != nil {
+		return err
+	}
+	orderInfo, err := service.loyalityRepository.GetOrderInfo(number)
+	if err != nil {
+		service.logger.Error("failed to get order info from loyalty system", zap.String("error", err.Error()))
+		return err
+	}
+	err = service.orderRepository.UpdateOrder(userId, orderInfo.Number, orderInfo.Status, orderInfo.Accrual)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -11,7 +11,7 @@ func GetUserIdFromGin(ctx *gin.Context) (*uuid.UUID, error) {
 	userId, exists := ctx.Get(middleware.UserIDProperty)
 
 	if !exists {
-		return nil, fmt.Errorf("sfdsdfsdf")
+		return nil, fmt.Errorf("user does not exsits in context")
 	}
 
 	userUUID := userId.(uuid.UUID)

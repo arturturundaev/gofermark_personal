@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"gofermark_personal/internal/service"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -35,56 +36,56 @@ func (JWTValidator *JWTValidator) Handle(ctx *gin.Context) {
 	token := ctx.GetHeader(HeaderTokenProperty)
 
 	if token == "" {
-		ctx.AbortWithStatusJSON(http.StatusForbidden, "")
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, "")
 		return
 	}
 
 	userId, errorValidateToken := JWTValidator.getUserIDFromToken(token)
 
 	if errorValidateToken != nil {
-		ctx.AbortWithStatusJSON(http.StatusForbidden, "")
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, errorValidateToken)
 		return
 	}
 
 	if userId == nil {
-		ctx.AbortWithStatusJSON(http.StatusForbidden, "")
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, "")
 		return
 	}
 
 	userExists, err := JWTValidator.userRepository.UserExistsByID(*userId)
 
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusForbidden, "")
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, "")
 		return
 	}
 
 	if !userExists {
-		ctx.AbortWithStatusJSON(http.StatusForbidden, "")
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, "")
 		return
 	}
 
 	err = JWTValidator.InitToken(ctx, userId)
 
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusForbidden, "")
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, "")
 		return
 	}
 
-	ctx.Set(UserIDProperty, userId)
+	ctx.Set(UserIDProperty, *userId)
 }
 
 func (JWTValidator *JWTValidator) getUserIDFromToken(tokenString string) (*uuid.UUID, error) {
+	fmt.Println(tokenString)
+
 	claims := &Claims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims,
+	tokenString = strings.Replace(tokenString, "Bearer ", "", 1)
+	token, _ := jwt.ParseWithClaims(tokenString, claims,
 		func(t *jwt.Token) (interface{}, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 			}
 			return []byte(SecretKey), nil
 		})
-	if err != nil {
-		return nil, err
-	}
 
 	if !token.Valid {
 		return nil, fmt.Errorf("token is not valid")

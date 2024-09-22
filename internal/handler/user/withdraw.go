@@ -25,7 +25,7 @@ func (handler *UserWithdrawHandler) Handler(ctx *gin.Context) {
 		Sum    float64 `json:"sum"`
 	}
 
-	err := ctx.BindJSON(req)
+	err := ctx.BindJSON(&req)
 	if err != nil {
 		handler.logger.Error("failed to decode body", zap.String("error", err.Error()))
 		ctx.AbortWithStatus(http.StatusInternalServerError)
