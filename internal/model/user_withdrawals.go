@@ -1,0 +1,14 @@
+package model
+
+import (
+	"github.com/google/uuid"
+	"time"
+)
+
+type UserWithdrawals struct {
+	ID        uuid.UUID `db:"id"`
+	UserID    uuid.UUID `db:"user_id"`
+	Sum       float64   `db:"sum"`
+	Number    string    `db:"number" json:"Order"`
+	CreatedAt time.Time `db:"created_at"`
+}
