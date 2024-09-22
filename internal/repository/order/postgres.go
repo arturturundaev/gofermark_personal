@@ -1,13 +1,14 @@
 package order
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	errors2 "gofermark_personal/internal/errors"
 	"gofermark_personal/internal/model"
-	"log"
 	"time"
 )
 
@@ -27,32 +28,34 @@ func NewOrderRepository(dns string, logger *zap.Logger) (*OrderRepository, error
 }
 
 func (repository *OrderRepository) CreateOrder(id uuid.UUID, userId uuid.UUID, number string, status string, createdAt time.Time, updatedAt time.Time, accrual float64) error {
-	tx, err := repository.db.Begin()
+	tx, err := repository.db.Beginx()
 	if err != nil {
 		repository.logger.Error("Failed open transaction", zap.String("error", err.Error()))
 		return err
 	}
 	defer tx.Rollback()
 
-	var someUserId uuid.UUID
-	// TODO КАК ЧКРЕЗ ТРАНЗАЦИЮ СРАЗУ НАПОЛНИТЬ СТРУКТУРУ ДАННЫМИ ?!
-	rows, err := tx.Query(fmt.Sprintf(`SELECT user_id FROM %s WHERE number=$1;`, tableName), number)
+	var someUserId *uuid.UUID
+
+	err = tx.Get(
+		someUserId,
+		fmt.Sprintf(`SELECT user_id FROM %s WHERE number=$1;`, tableName),
+		number,
+	)
+
 	if err != nil {
 		repository.logger.Error("failed get user from order", zap.String("error", err.Error()))
 		return err
 	}
-	if rows.Next() {
-		err = rows.Scan(someUserId)
-		if err != nil {
-			log.Fatalln(err)
-			return err
-		}
-		if someUserId != userId {
-			return errors2.ErrConflict
-		}
 
+	if *someUserId != userId {
+		return errors2.ErrConflict
+	}
+
+	if someUserId != nil {
 		return errors2.ErrExists
 	}
+
 	_, err = tx.Exec(fmt.Sprintf(`INSERT INTO %s (id, user_id, number, status, accrual, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`, tableName),
 		id,
 		userId,
@@ -70,6 +73,21 @@ func (repository *OrderRepository) CreateOrder(id uuid.UUID, userId uuid.UUID, n
 	return nil
 }
 
+func (repository *OrderRepository) GetOrder(number string) (*model.Order, error) {
+	repository.logger.Info("get order", zap.String("number", number))
+	var result model.Order
+	err := repository.db.Get(&result, fmt.Sprintf(`SELECT number, status, accrual, date FROM %s WHERE number=$1;`, tableName), number)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors2.ErrInvalid
+		}
+		repository.logger.Error("Failed to get order from db", zap.String("error", err.Error()))
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 func (repository *OrderRepository) GetOrders(userID uuid.UUID) ([]model.Order, error) {
 	var result []model.Order
 	err := repository.db.Get(&result, fmt.Sprintf(`SELECT number, status, accrual, date FROM %s WHERE userID=$1;`, tableName), userID)
@@ -79,4 +97,28 @@ func (repository *OrderRepository) GetOrders(userID uuid.UUID) ([]model.Order, e
 	}
 
 	return result, nil
+}
+
+func (repository *OrderRepository) UpdateOrder(userID uuid.UUID, number string, status string, accrual float32) error {
+	tx, err := repository.db.Begin()
+	if err != nil {
+		repository.logger.Error("Failed to create transaction", zap.String("error", err.Error()))
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(fmt.Sprintf(`UPDATE %s SET status=$1, accrual=$2 WHERE number=$3`, tableName), status, accrual, number)
+	if err != nil {
+		repository.logger.Error("Failed to delete urls from db", zap.String("error", err.Error()))
+		return err
+	}
+
+	query := `INSERT INTO balance (userID, sum, withDrawn) Values ($1, $2, 0.0) ON CONFLICT (userID) DO UPDATE SET sum=balance.sum + EXCLUDED.sum`
+	_, err = tx.Exec(query, userID, accrual)
+	if err != nil {
+		repository.logger.Error("Failed to update balance", zap.String("error", err.Error()))
+		return err
+	}
+
+	return tx.Commit()
 }

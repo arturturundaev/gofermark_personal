@@ -50,3 +50,15 @@ func (service *UserService) hashPassword(password string) ([]byte, error) {
 func (service *UserService) compareHashAndPassword(hashedPassword []byte, password string) error {
 	return bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
 }
+
+func (service *UserService) GetBalance(userID uuid.UUID) (*model.UserBalance, error) {
+	return service.repository.GetBalance(userID)
+}
+
+func (service *UserService) Withdraw(userID uuid.UUID, number string, sum float64) error {
+	return service.repository.Withdraw(userID, number, sum)
+}
+
+func (service *UserService) GetWithdrawals(userID uuid.UUID) ([]model.UserWithdrawals, error) {
+	return service.repository.GetWithdrawals(userID)
+}

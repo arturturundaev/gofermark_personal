@@ -13,7 +13,7 @@ type OrderListdHandler struct {
 	logger  *zap.Logger
 }
 
-func NewOrderListdHandler(service *order.OrderService, logger *zap.Logger) *OrderListdHandler {
+func NewOrderListHandler(service *order.OrderService, logger *zap.Logger) *OrderListdHandler {
 	return &OrderListdHandler{service: service, logger: logger}
 }
 

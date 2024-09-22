@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
+	errors2 "gofermark_personal/internal/errors"
 	"gofermark_personal/internal/model"
 )
 
@@ -81,4 +84,58 @@ func (repository *UserRepository) GetByLogin(login string) (*model.User, error) 
 
 func (repository *UserRepository) GetDB() *sqlx.DB {
 	return repository.db
+}
+
+func (repository *UserRepository) GetBalance(userID uuid.UUID) (*model.UserBalance, error) {
+	var result model.UserBalance
+	err := repository.db.Get(
+		result,
+		"SELECT sum, withDrawn FROM user_balance WHERE userID=$1", userID)
+	if err != nil {
+		repository.logger.Error("Failed to get balance", zap.String("error", err.Error()))
+		return &result, err
+	}
+	return &result, nil
+}
+
+func (repository *UserRepository) Withdraw(userID uuid.UUID, number string, sum float64) error {
+	tx, err := repository.db.Begin()
+	if err != nil {
+		repository.logger.Error("Failed to create transaction", zap.String("error", err.Error()))
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("UPDATE user_balance SET sum=sum-$1, withDrawn=withDrawn+$1 WHERE userID=$2", sum, userID)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+			return errors2.ErrNotEnoughtMoney
+		}
+		repository.logger.Error("Failed to update balance", zap.String("error", err.Error()))
+		return err
+	}
+
+	_, err = tx.Exec("INSERT INTO user_withdrawals (userID, number, sum, date) Values ($1, $2, $3, current_timestamp)", userID, number, sum)
+	if err != nil {
+		repository.logger.Error("Failed to insert into withdrawals", zap.String("error", err.Error()))
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (repository *UserRepository) GetWithdrawals(userID uuid.UUID) ([]model.UserWithdrawals, error) {
+	var result []model.UserWithdrawals
+
+	err := repository.db.Get(
+		&result,
+		`SELECT number, sum, date FROM user_withdrawals WHERE userID=$1`,
+		userID)
+	if err != nil {
+		repository.logger.Error("Failed to get withdrawals", zap.String("error", err.Error()))
+		return result, err
+	}
+
+	return result, nil
 }

@@ -17,7 +17,7 @@ type OrderUploadHandler struct {
 	logger  *zap.Logger
 }
 
-func NewUploadHandler(service *order.OrderService, logger *zap.Logger) *OrderUploadHandler {
+func NewOrderUploadHandler(service *order.OrderService, logger *zap.Logger) *OrderUploadHandler {
 	return &OrderUploadHandler{service: service, logger: logger}
 }
 

@@ -12,4 +12,8 @@ type IUserRepository interface {
 	UserExistsByLogin(login string) (bool, error)
 	UserExistsByID(id uuid.UUID) (bool, error)
 	GetByLogin(login string) (*model.User, error)
+
+	GetBalance(userID uuid.UUID) (*model.UserBalance, error)
+	Withdraw(userID uuid.UUID, number string, sum float64) error
+	GetWithdrawals(userID uuid.UUID) ([]model.UserWithdrawals, error)
 }
