@@ -4,16 +4,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"gofermark_personal/internal/middleware"
 	"gofermark_personal/internal/model"
-	"gofermark_personal/internal/service/user"
 	"net/http"
 )
 
+type userAuthenticator interface {
+	Auth(login string, password string) (*model.User, error)
+}
+
 type UserLoginHandler struct {
-	service      *user.UserService
+	service      userAuthenticator
 	JWTValidator *middleware.JWTValidator
 }
 
-func NewUserLoginHandler(service *user.UserService, JWTValidator *middleware.JWTValidator) *UserLoginHandler {
+func NewUserLoginHandler(service userAuthenticator, JWTValidator *middleware.JWTValidator) *UserLoginHandler {
 	return &UserLoginHandler{service: service, JWTValidator: JWTValidator}
 }
 

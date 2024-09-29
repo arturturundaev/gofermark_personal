@@ -2,18 +2,23 @@ package user
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"gofermark_personal/internal/helper"
-	"gofermark_personal/internal/service/user"
+	"gofermark_personal/internal/model"
 	"net/http"
 )
 
+type withdrawGetter interface {
+	GetWithdrawals(userID uuid.UUID) ([]model.UserWithdrawals, error)
+}
+
 type UserWithdrawalList struct {
-	userService *user.UserService
+	userService withdrawGetter
 	logger      *zap.Logger
 }
 
-func NewUserWithdrawalList(userService *user.UserService, logger *zap.Logger) *UserWithdrawalList {
+func NewUserWithdrawalList(userService withdrawGetter, logger *zap.Logger) *UserWithdrawalList {
 	return &UserWithdrawalList{userService: userService, logger: logger}
 }
 

@@ -4,15 +4,23 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"gofermark_personal/internal/model"
-	"gofermark_personal/internal/service"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserService struct {
-	repository service.IUserRepository
+type userRepository interface {
+	UserExistsByLogin(login string) (bool, error)
+	Save(id uuid.UUID, login string, password string) error
+	GetByLogin(login string) (*model.User, error)
+	GetBalance(userID uuid.UUID) (*model.UserBalance, error)
+	Withdraw(userID uuid.UUID, number string, sum float64) error
+	GetWithdrawals(userID uuid.UUID) ([]model.UserWithdrawals, error)
 }
 
-func NewUserService(repository service.IUserRepository) *UserService {
+type UserService struct {
+	repository userRepository
+}
+
+func NewUserService(repository userRepository) *UserService {
 	return &UserService{repository: repository}
 }
 

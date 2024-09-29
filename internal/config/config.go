@@ -3,17 +3,26 @@ package config
 import (
 	"flag"
 	"os"
+	"time"
 )
 
 type Config struct {
-	ServerAddress    string
-	DatabaseDSN      string
-	AccrualSystemURL string
-	LogLevel         string
+	ServerAddress       string
+	DatabaseDSN         string
+	AccrualSystemURL    string
+	LogLevel            string
+	TokenExp            time.Duration
+	SecretKey           string
+	HeaderTokenProperty string
 }
 
-func GetConfig() *Config {
-	config := &Config{LogLevel: "info"}
+func NewConfig() *Config {
+	config := &Config{
+		LogLevel:            "info",
+		TokenExp:            3 * time.Hour,
+		SecretKey:           "0N#6Ke|+OR:(`G;",
+		HeaderTokenProperty: "Authorization",
+	}
 	flag.StringVar(&config.ServerAddress, "a", "", "run address")
 	flag.StringVar(&config.DatabaseDSN, "d", "", "database uri")
 	flag.StringVar(&config.AccrualSystemURL, "r", "", "accrual system address")

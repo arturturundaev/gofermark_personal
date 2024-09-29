@@ -2,18 +2,23 @@ package user
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"gofermark_personal/internal/helper"
-	"gofermark_personal/internal/service/user"
+	"gofermark_personal/internal/model"
 	"net/http"
 )
 
+type userBalancer interface {
+	GetBalance(userID uuid.UUID) (*model.UserBalance, error)
+}
+
 type UserBalanceHandler struct {
-	userService *user.UserService
+	userService userBalancer
 	logger      *zap.Logger
 }
 
-func NewUserBalanceHandler(userService *user.UserService, logger *zap.Logger) *UserBalanceHandler {
+func NewUserBalanceHandler(userService userBalancer, logger *zap.Logger) *UserBalanceHandler {
 	return &UserBalanceHandler{userService: userService, logger: logger}
 }
 

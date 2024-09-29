@@ -4,18 +4,33 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"gofermark_personal/internal/model"
-	"gofermark_personal/internal/service"
 	"time"
 )
 
+type orderRepository interface {
+	CreateOrder(id uuid.UUID, userID uuid.UUID, number string, status string, createdAt time.Time, updatedAt time.Time, accrual float64) error
+	GetOrders(userID uuid.UUID) ([]model.Order, error)
+	UpdateOrder(userID uuid.UUID, number string, status string, accrual float32) error
+}
+
+type userRepository interface {
+	GetBalance(userID uuid.UUID) (*model.UserBalance, error)
+	Withdraw(userID uuid.UUID, number string, sum float64) error
+	GetWithdrawals(userID uuid.UUID) ([]model.UserWithdrawals, error)
+}
+
+type loyalityRepository interface {
+	GetOrderInfo(orderNumber string) (*model.LoyaltyOrderInfo, error)
+}
+
 type OrderService struct {
-	orderRepository    service.IOrderRepository
-	userRepository     service.IUserRepository
-	loyalityRepository service.LoyalityRepository
+	orderRepository    orderRepository
+	userRepository     userRepository
+	loyalityRepository loyalityRepository
 	logger             *zap.Logger
 }
 
-func NewOrderService(orderRepository service.IOrderRepository, userRepository service.IUserRepository, loyalityRepository service.LoyalityRepository, logger *zap.Logger) *OrderService {
+func NewOrderService(orderRepository orderRepository, userRepository userRepository, loyalityRepository loyalityRepository, logger *zap.Logger) *OrderService {
 	return &OrderService{orderRepository: orderRepository, userRepository: userRepository, loyalityRepository: loyalityRepository, logger: logger}
 }
 

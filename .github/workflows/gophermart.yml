@@ -50,6 +50,10 @@ jobs:
           (cd cmd/gophermart && go build -buildvcs=false -o gophermart)
           (cd cmd/accrual && chmod +x accrual_linux_amd64)
 
+      - name: Run migration
+        run: |
+          ./internal/cli/migration/migrate -d="postgresql://postgres:postgres@postgres/praktikum?sslmode=disable"
+
       - name: Test
         run: |
           gophermarttest \

@@ -2,18 +2,23 @@ package order
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"gofermark_personal/internal/helper"
-	"gofermark_personal/internal/service/order"
+	"gofermark_personal/internal/model"
 	"net/http"
 )
 
+type orderGetter interface {
+	GetOrders(userID uuid.UUID) ([]model.Order, error)
+}
+
 type OrderListdHandler struct {
-	service *order.OrderService
+	service orderGetter
 	logger  *zap.Logger
 }
 
-func NewOrderListHandler(service *order.OrderService, logger *zap.Logger) *OrderListdHandler {
+func NewOrderListHandler(service orderGetter, logger *zap.Logger) *OrderListdHandler {
 	return &OrderListdHandler{service: service, logger: logger}
 }
 

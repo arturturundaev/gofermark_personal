@@ -2,18 +2,23 @@ package user
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gofermark_personal/internal/middleware"
 	"gofermark_personal/internal/model"
-	"gofermark_personal/internal/service/user"
 	"net/http"
 )
 
+type userRegister interface {
+	UserExists(login string) (bool, error)
+	Register(login string, password string) (*uuid.UUID, error)
+}
+
 type UserRegisterHandler struct {
-	service      *user.UserService
+	service      userRegister
 	JWTValidator *middleware.JWTValidator
 }
 
-func NewUserRegisterHandler(service *user.UserService, JWTValidator *middleware.JWTValidator) *UserRegisterHandler {
+func NewUserRegisterHandler(service userRegister, JWTValidator *middleware.JWTValidator) *UserRegisterHandler {
 	return &UserRegisterHandler{service: service, JWTValidator: JWTValidator}
 }
 

@@ -5,15 +5,23 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"gofermark_personal/internal/service"
 	"net/http"
 	"strings"
 	"time"
 )
 
+const UserIDProperty = "UserId"
+
+type userChecker interface {
+	UserExistsByID(id uuid.UUID) (bool, error)
+}
+
 type JWTValidator struct {
-	Claims         Claims
-	userRepository service.IUserRepository
+	Claims              Claims
+	userRepository      userChecker
+	tokenExpire         time.Duration
+	secretKey           string
+	headerTokenProperty string
 }
 
 type Claims struct {
@@ -21,19 +29,19 @@ type Claims struct {
 	UserID uuid.UUID
 }
 
-func NewJWTValidator(userRepository service.IUserRepository) *JWTValidator {
-	return &JWTValidator{userRepository: userRepository}
+func NewJWTValidator(userRepository userChecker, tokenExpire time.Duration, secretKey string, headerTokenProperty string) *JWTValidator {
+	return &JWTValidator{
+		userRepository:      userRepository,
+		tokenExpire:         tokenExpire,
+		secretKey:           secretKey,
+		headerTokenProperty: headerTokenProperty,
+	}
 }
-
-const TokenExp = 3 * time.Hour
-const SecretKey = "0N#6Ke|+OR:(`G;"
-const UserIDProperty = "UserId"
-const HeaderTokenProperty = "Authorization"
 
 // Handle Проверяем токен пользователя
 // В случае успеха продлеваем токен
 func (JWTValidator *JWTValidator) Handle(ctx *gin.Context) {
-	token := ctx.GetHeader(HeaderTokenProperty)
+	token := ctx.GetHeader(JWTValidator.headerTokenProperty)
 
 	if token == "" {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, "")
@@ -84,7 +92,7 @@ func (JWTValidator *JWTValidator) getUserIDFromToken(tokenString string) (*uuid.
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 			}
-			return []byte(SecretKey), nil
+			return []byte(JWTValidator.secretKey), nil
 		})
 
 	if !token.Valid {
@@ -97,12 +105,12 @@ func (JWTValidator *JWTValidator) getUserIDFromToken(tokenString string) (*uuid.
 func (JWTValidator *JWTValidator) buildJWT(userID *uuid.UUID) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TokenExp)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(JWTValidator.tokenExpire)),
 		},
 		UserID: *userID,
 	})
 
-	tokenString, err := token.SignedString([]byte(SecretKey))
+	tokenString, err := token.SignedString([]byte(JWTValidator.secretKey))
 	if err != nil {
 		return "", err
 	}
@@ -117,7 +125,7 @@ func (JWTValidator *JWTValidator) InitToken(ctx *gin.Context, userID *uuid.UUID)
 		return err
 	}
 
-	ctx.Header(HeaderTokenProperty, token)
+	ctx.Header(JWTValidator.headerTokenProperty, token)
 
 	return nil
 }

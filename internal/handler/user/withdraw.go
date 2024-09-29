@@ -3,19 +3,25 @@ package user
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
-	errors2 "gofermark_personal/internal/errors"
 	"gofermark_personal/internal/helper"
-	"gofermark_personal/internal/service/user"
 	"net/http"
 )
 
+var ErrInvalid = errors.New("invalid")
+var ErrNotEnoughtMoney = errors.New("not enought money")
+
+type withdrawService interface {
+	Withdraw(userID uuid.UUID, number string, sum float64) error
+}
+
 type UserWithdrawHandler struct {
-	userService *user.UserService
+	userService withdrawService
 	logger      *zap.Logger
 }
 
-func NewUserWithdrawHandler(userService *user.UserService, logger *zap.Logger) *UserWithdrawHandler {
+func NewUserWithdrawHandler(userService withdrawService, logger *zap.Logger) *UserWithdrawHandler {
 	return &UserWithdrawHandler{userService: userService, logger: logger}
 }
 
@@ -40,13 +46,13 @@ func (handler *UserWithdrawHandler) Handler(ctx *gin.Context) {
 	}
 
 	err = handler.userService.Withdraw(*userID, req.Number, req.Sum)
-	if errors.Is(err, errors2.ErrInvalid) {
+	if errors.Is(err, ErrInvalid) {
 		handler.logger.Error("failed to get balance", zap.String("error", err.Error()))
 		ctx.AbortWithStatus(http.StatusUnprocessableEntity)
 		return
 	}
 
-	if errors.Is(err, errors2.ErrNotEnoughtMoney) {
+	if errors.Is(err, ErrNotEnoughtMoney) {
 		handler.logger.Error("failed to get balance", zap.String("error", err.Error()))
 		ctx.AbortWithStatus(http.StatusPaymentRequired)
 		return

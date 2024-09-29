@@ -4,16 +4,23 @@ import (
 	"errors"
 	"github.com/ShiraazMoollatjie/goluhn"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
-	errors2 "gofermark_personal/internal/errors"
 	"gofermark_personal/internal/helper"
 	"gofermark_personal/internal/service/order"
 	"io"
 	"net/http"
 )
 
+var ErrExists = errors.New("exists")
+var ErrConflict = errors.New("conflicct")
+
+type orderCreater interface {
+	Create(userID uuid.UUID, number string) error
+}
+
 type OrderUploadHandler struct {
-	service *order.OrderService
+	service orderCreater
 	logger  *zap.Logger
 }
 
@@ -46,11 +53,11 @@ func (handler *OrderUploadHandler) Handler(ctx *gin.Context) {
 
 	err = handler.service.Create(*userID, strOrderNumber)
 	if err != nil {
-		if errors.Is(err, errors2.ErrExists) {
+		if errors.Is(err, ErrExists) {
 			ctx.AbortWithStatus(http.StatusOK)
 			return
 		}
-		if errors.Is(err, errors2.ErrConflict) {
+		if errors.Is(err, ErrConflict) {
 			ctx.AbortWithStatus(http.StatusConflict)
 			return
 		}
