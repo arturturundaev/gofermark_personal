@@ -24,8 +24,8 @@ func NewOrderRepository(db *sqlx.DB, logger *zap.Logger) *OrderRepository {
 	return &OrderRepository{db: db, logger: logger}
 }
 
-var getUserByOrderNumberSql = `SELECT user_id FROM %s WHERE number=$1;`
-var createOrderSql = `INSERT INTO %s (id, user_id, number, status, accrual, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+var getUserByOrderNumberSQL = `SELECT user_id FROM %s WHERE number=$1;`
+var createOrderSQL = `INSERT INTO %s (id, user_id, number, status, accrual, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
 func (repository *OrderRepository) CreateOrder(id uuid.UUID, userID uuid.UUID, number string, status string, createdAt time.Time, updatedAt time.Time, accrual float64) error {
 	tx, err := repository.db.Beginx()
@@ -37,7 +37,7 @@ func (repository *OrderRepository) CreateOrder(id uuid.UUID, userID uuid.UUID, n
 
 	var someUserID *uuid.UUID
 
-	err = tx.Get(&someUserID, fmt.Sprintf(getUserByOrderNumberSql, tableName), number)
+	err = tx.Get(&someUserID, fmt.Sprintf(getUserByOrderNumberSQL, tableName), number)
 
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		repository.logger.Error("failed get user from order", zap.String("error", err.Error()))
@@ -52,7 +52,7 @@ func (repository *OrderRepository) CreateOrder(id uuid.UUID, userID uuid.UUID, n
 		return order.ErrExists
 	}
 
-	_, err = tx.Exec(fmt.Sprintf(createOrderSql, tableName), id, userID, number, status, accrual, createdAt, updatedAt)
+	_, err = tx.Exec(fmt.Sprintf(createOrderSQL, tableName), id, userID, number, status, accrual, createdAt, updatedAt)
 	if err != nil {
 		repository.logger.Error("Failed insert order to Database", zap.String("error", err.Error()))
 		return err
@@ -62,12 +62,12 @@ func (repository *OrderRepository) CreateOrder(id uuid.UUID, userID uuid.UUID, n
 	return nil
 }
 
-var getOrderByNumberSql = `SELECT number, status, accrual, date FROM %s WHERE number=$1;`
+var getOrderByNumberSQL = `SELECT number, status, accrual, date FROM %s WHERE number=$1;`
 
 func (repository *OrderRepository) GetOrder(number string) (*model.Order, error) {
 	repository.logger.Info("get order", zap.String("number", number))
 	var result model.Order
-	err := repository.db.Get(&result, fmt.Sprintf(getOrderByNumberSql, tableName), number)
+	err := repository.db.Get(&result, fmt.Sprintf(getOrderByNumberSQL, tableName), number)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, user.ErrInvalid
@@ -79,11 +79,11 @@ func (repository *OrderRepository) GetOrder(number string) (*model.Order, error)
 	return &result, nil
 }
 
-var getOrdersByUserSql = `SELECT  id, user_id, number, status, accrual, created_at, updated_at FROM %s WHERE user_id=$1;`
+var getOrdersByUserSQL = `SELECT  id, user_id, number, status, accrual, created_at, updated_at FROM %s WHERE user_id=$1;`
 
 func (repository *OrderRepository) GetOrders(userID uuid.UUID) ([]model.Order, error) {
 	var result []model.Order
-	err := repository.db.Select(&result, fmt.Sprintf(getOrdersByUserSql, tableName), userID)
+	err := repository.db.Select(&result, fmt.Sprintf(getOrdersByUserSQL, tableName), userID)
 	if err != nil {
 		repository.logger.Error("Failed get orders from Database", zap.String("error", err.Error()))
 		return nil, err
@@ -92,8 +92,8 @@ func (repository *OrderRepository) GetOrders(userID uuid.UUID) ([]model.Order, e
 	return result, nil
 }
 
-var updateStatusSql = `UPDATE %s SET status=$1, accrual=$2 WHERE number=$3`
-var setUerBalanceSql = `INSERT INTO user_balance (id, user_id, sum, with_drawn) Values ($1, $2, $3, $4) ON CONFLICT (user_id) DO UPDATE SET sum=user_balance.sum + EXCLUDED.sum`
+var updateStatusSQL = `UPDATE %s SET status=$1, accrual=$2 WHERE number=$3`
+var setUerBalanceSQL = `INSERT INTO user_balance (id, user_id, sum, with_drawn) Values ($1, $2, $3, $4) ON CONFLICT (user_id) DO UPDATE SET sum=user_balance.sum + EXCLUDED.sum`
 
 func (repository *OrderRepository) UpdateOrder(userID uuid.UUID, number string, status string, accrual float32) error {
 	tx, err := repository.db.Begin()
@@ -103,13 +103,13 @@ func (repository *OrderRepository) UpdateOrder(userID uuid.UUID, number string, 
 	}
 	defer tx.Rollback()
 
-	_, err = tx.Exec(fmt.Sprintf(updateStatusSql, tableName), status, accrual, number)
+	_, err = tx.Exec(fmt.Sprintf(updateStatusSQL, tableName), status, accrual, number)
 	if err != nil {
 		repository.logger.Error("Failed to delete urls from db", zap.String("error", err.Error()))
 		return err
 	}
 
-	_, err = tx.Exec(setUerBalanceSql, uuid.New().String(), userID, accrual, 0)
+	_, err = tx.Exec(setUerBalanceSQL, uuid.New().String(), userID, accrual, 0)
 	if err != nil {
 		repository.logger.Error("Failed to update balance", zap.String("error", err.Error()))
 		return err

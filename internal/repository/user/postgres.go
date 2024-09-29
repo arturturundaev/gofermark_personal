@@ -25,10 +25,10 @@ func NewUserRepository(db *sqlx.DB, logger *zap.Logger) *UserRepository {
 	return &UserRepository{db: db, logger: logger}
 }
 
-var createUserSql = `INSERT INTO %s (id, login, password) VALUES (:id, :login, :password)`
+var createUserSQL = `INSERT INTO %s (id, login, password) VALUES (:id, :login, :password)`
 
 func (repository *UserRepository) Save(id uuid.UUID, login string, password string) error {
-	_, err := repository.db.NamedExec(fmt.Sprintf(createUserSql, tableName), map[string]interface{}{"id": id, "login": login, "password": password})
+	_, err := repository.db.NamedExec(fmt.Sprintf(createUserSQL, tableName), map[string]interface{}{"id": id, "login": login, "password": password})
 
 	return err
 }
@@ -41,12 +41,12 @@ func (repository *UserRepository) UserExistsByID(id uuid.UUID) (bool, error) {
 	return repository.userExistsByProperty("id", id)
 }
 
-var checkUserSql = `SELECT true FROM %s WHERE %s = $1`
+var checkUserSQL = `SELECT true FROM %s WHERE %s = $1`
 
 func (repository *UserRepository) userExistsByProperty(propertyName string, value interface{}) (bool, error) {
 	var exists bool
 
-	err := repository.db.Get(&exists, fmt.Sprintf(checkUserSql, tableName, propertyName), value)
+	err := repository.db.Get(&exists, fmt.Sprintf(checkUserSQL, tableName, propertyName), value)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
@@ -58,12 +58,12 @@ func (repository *UserRepository) userExistsByProperty(propertyName string, valu
 	return exists, nil
 }
 
-var getUserSql = `SELECT id, login, password FROM %s WHERE login = $1`
+var getUserSQL = `SELECT id, login, password FROM %s WHERE login = $1`
 
 func (repository *UserRepository) GetByLogin(login string) (*model.User, error) {
 	var user model.User
 
-	err := repository.db.Get(&user, fmt.Sprintf(getUserSql, tableName), login)
+	err := repository.db.Get(&user, fmt.Sprintf(getUserSQL, tableName), login)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -80,11 +80,11 @@ func (repository *UserRepository) GetDB() *sqlx.DB {
 	return repository.db
 }
 
-var getUserBalanceSql = "SELECT id, user_id, sum, with_drawn FROM user_balance WHERE user_id=$1"
+var getUserBalanceSQL = "SELECT id, user_id, sum, with_drawn FROM user_balance WHERE user_id=$1"
 
 func (repository *UserRepository) GetBalance(userID uuid.UUID) (*model.UserBalance, error) {
 	var result model.UserBalance
-	err := repository.db.Get(&result, getUserBalanceSql, userID)
+	err := repository.db.Get(&result, getUserBalanceSQL, userID)
 	if err != nil {
 		repository.logger.Error("Failed to get balance", zap.String("error", err.Error()))
 		return &result, err
@@ -92,8 +92,8 @@ func (repository *UserRepository) GetBalance(userID uuid.UUID) (*model.UserBalan
 	return &result, nil
 }
 
-var setWithdrawUpdateSql = "UPDATE user_balance SET sum=sum-$1, with_drawn=with_drawn+$1 WHERE user_id=$2"
-var setWithdrawCreateSql = "INSERT INTO user_withdrawals (id, user_id, number, sum, created_at) Values ($1, $2, $3, $4, $5)"
+var setWithdrawUpdateSQL = "UPDATE user_balance SET sum=sum-$1, with_drawn=with_drawn+$1 WHERE user_id=$2"
+var setWithdrawCreateSQL = "INSERT INTO user_withdrawals (id, user_id, number, sum, created_at) Values ($1, $2, $3, $4, $5)"
 
 func (repository *UserRepository) Withdraw(userID uuid.UUID, number string, sum float64) error {
 	tx, err := repository.db.Begin()
@@ -103,7 +103,7 @@ func (repository *UserRepository) Withdraw(userID uuid.UUID, number string, sum 
 	}
 	defer tx.Rollback()
 
-	_, err = tx.Exec(setWithdrawUpdateSql, sum, userID)
+	_, err = tx.Exec(setWithdrawUpdateSQL, sum, userID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
@@ -113,7 +113,7 @@ func (repository *UserRepository) Withdraw(userID uuid.UUID, number string, sum 
 		return err
 	}
 
-	_, err = tx.Exec(setWithdrawCreateSql, uuid.New(), userID, number, sum, time.Now())
+	_, err = tx.Exec(setWithdrawCreateSQL, uuid.New(), userID, number, sum, time.Now())
 	if err != nil {
 		repository.logger.Error("Failed to insert into withdrawals", zap.String("error", err.Error()))
 		return err
@@ -122,12 +122,12 @@ func (repository *UserRepository) Withdraw(userID uuid.UUID, number string, sum 
 	return tx.Commit()
 }
 
-var getWithdrawalsSql = `SELECT id, user_id, sum, number, created_at FROM user_withdrawals WHERE user_id=$1`
+var getWithdrawalsSQL = `SELECT id, user_id, sum, number, created_at FROM user_withdrawals WHERE user_id=$1`
 
 func (repository *UserRepository) GetWithdrawals(userID uuid.UUID) ([]model.UserWithdrawals, error) {
 	var result []model.UserWithdrawals
 
-	err := repository.db.Select(&result, getWithdrawalsSql, userID)
+	err := repository.db.Select(&result, getWithdrawalsSQL, userID)
 	if err != nil {
 		repository.logger.Error("Failed to get withdrawals", zap.String("error", err.Error()))
 		return result, err
