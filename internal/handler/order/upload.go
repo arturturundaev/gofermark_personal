@@ -68,5 +68,4 @@ func (handler *OrderUploadHandler) Handler(ctx *gin.Context) {
 	}
 	handler.logger.Error("failed to create order", zap.String("error", err.Error()))
 	ctx.AbortWithStatus(http.StatusInternalServerError)
-	return
 }
