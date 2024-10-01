@@ -19,19 +19,19 @@ type userRepository interface {
 	GetWithdrawals(userID uuid.UUID) ([]model.UserWithdrawals, error)
 }
 
-type loyalityRepository interface {
-	GetOrderInfo(orderNumber string) (*model.LoyaltyOrderInfo, error)
+type loyaltyService interface {
+	SendToGetOrderInfo(orderNumber string, userID uuid.UUID)
 }
 
 type OrderService struct {
-	orderRepository    orderRepository
-	userRepository     userRepository
-	loyalityRepository loyalityRepository
-	logger             *zap.Logger
+	orderRepository orderRepository
+	userRepository  userRepository
+	loyaltyService  loyaltyService
+	logger          *zap.Logger
 }
 
-func NewOrderService(orderRepository orderRepository, userRepository userRepository, loyalityRepository loyalityRepository, logger *zap.Logger) *OrderService {
-	return &OrderService{orderRepository: orderRepository, userRepository: userRepository, loyalityRepository: loyalityRepository, logger: logger}
+func NewOrderService(orderRepository orderRepository, userRepository userRepository, loyaltyService loyaltyService, logger *zap.Logger) *OrderService {
+	return &OrderService{orderRepository: orderRepository, userRepository: userRepository, loyaltyService: loyaltyService, logger: logger}
 }
 
 func (service *OrderService) Create(userID uuid.UUID, number string) error {
@@ -46,15 +46,8 @@ func (service *OrderService) Create(userID uuid.UUID, number string) error {
 	if err != nil {
 		return err
 	}
-	orderInfo, err := service.loyalityRepository.GetOrderInfo(number)
-	if err != nil {
-		service.logger.Error("failed to get order info from loyalty system", zap.String("error", err.Error()))
-		return err
-	}
-	err = service.orderRepository.UpdateOrder(userID, orderInfo.Number, orderInfo.Status, orderInfo.Accrual)
-	if err != nil {
-		return err
-	}
+
+	service.loyaltyService.SendToGetOrderInfo(number, userID)
 	return nil
 }
 

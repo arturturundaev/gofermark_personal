@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -12,6 +13,7 @@ import (
 	"gofermark_personal/internal/repository/loyalty"
 	"gofermark_personal/internal/repository/order"
 	"gofermark_personal/internal/repository/user"
+	loyalty2 "gofermark_personal/internal/service/loyalty"
 	orderService "gofermark_personal/internal/service/order"
 	userService "gofermark_personal/internal/service/user"
 	"log"
@@ -34,6 +36,7 @@ func StartServer() {
 		logger.Fatal(err.Error())
 	}
 
+	ctx := context.Background()
 	// "postgres://postgres:postgres@localhost:5432/gofermark?sslmode=disable"
 	userRepository := user.NewUserRepository(postgres, logger)
 
@@ -41,7 +44,8 @@ func StartServer() {
 
 	loyalityRepository := loyalty.NewLoyaltyHTTPRepository(cfg.AccrualSystemURL, http.DefaultClient, logger)
 	userService := userService.NewUserService(userRepository)
-	orderService := orderService.NewOrderService(orderRepository, userRepository, loyalityRepository, logger)
+	loyaltyService := loyalty2.NewLoyaltyService(loyalityRepository, orderRepository, logger, ctx)
+	orderService := orderService.NewOrderService(orderRepository, userRepository, loyaltyService, logger)
 	JWTValidator := middleware.NewJWTValidator(userRepository, cfg.TokenExp, cfg.SecretKey, cfg.HeaderTokenProperty)
 
 	userRegisterHandler := userHandler.NewUserRegisterHandler(userService, JWTValidator)
@@ -61,6 +65,8 @@ func StartServer() {
 
 	router.POST("/api/user/orders", JWTValidator.Handle, orderCreateHandler.Handler)
 	router.GET("/api/user/orders", JWTValidator.Handle, orderListHandler.Handle)
+
+	go loyaltyService.Run()
 
 	errServer := http.ListenAndServe(cfg.ServerAddress, router)
 	if errServer != nil {
