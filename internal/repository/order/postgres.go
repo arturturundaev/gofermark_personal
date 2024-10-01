@@ -68,15 +68,15 @@ func (repository *OrderRepository) GetOrder(number string) (*model.Order, error)
 	repository.logger.Info("get order", zap.String("number", number))
 	var result model.Order
 	err := repository.db.Get(&result, fmt.Sprintf(getOrderByNumberSQL, tableName), number)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, user.ErrInvalid
-		}
-		repository.logger.Error("Failed to get order from db", zap.String("error", err.Error()))
-		return nil, err
+	if err == nil {
+		return &result, nil
 	}
 
-	return &result, nil
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, user.ErrInvalid
+	}
+	repository.logger.Error("Failed to get order from db", zap.String("error", err.Error()))
+	return nil, err
 }
 
 var getOrdersByUserSQL = `SELECT  id, user_id, number, status, accrual, created_at, updated_at FROM %s WHERE user_id=$1;`

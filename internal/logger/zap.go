@@ -10,13 +10,7 @@ import (
 	"time"
 )
 
-func AddLoggerToGIN(r *gin.Engine) (*zap.Logger, error) {
-	logger, err := zap.NewProduction()
-
-	if err != nil {
-		return nil, err
-	}
-
+func AddLoggerToGIN(logger *zap.Logger, r *gin.Engine) error {
 	r.Use(ginzap.Ginzap(logger, time.RFC3339, true))
 	r.Use(ginzap.RecoveryWithZap(logger, true))
 	r.Use(ginzap.GinzapWithConfig(logger, &ginzap.Config{
@@ -41,5 +35,5 @@ func AddLoggerToGIN(r *gin.Engine) (*zap.Logger, error) {
 		}),
 	}))
 
-	return logger, nil
+	return nil
 }

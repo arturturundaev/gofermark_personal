@@ -12,13 +12,13 @@ import (
 
 const UserIDProperty = "UserId"
 
-type userChecker interface {
+type UserChecker interface {
 	UserExistsByID(id uuid.UUID) (bool, error)
 }
 
 type JWTValidator struct {
 	Claims              Claims
-	userRepository      userChecker
+	userRepository      UserChecker
 	tokenExpire         time.Duration
 	secretKey           string
 	headerTokenProperty string
@@ -29,7 +29,7 @@ type Claims struct {
 	UserID uuid.UUID
 }
 
-func NewJWTValidator(userRepository userChecker, tokenExpire time.Duration, secretKey string, headerTokenProperty string) *JWTValidator {
+func NewJWTValidator(userRepository UserChecker, tokenExpire time.Duration, secretKey string, headerTokenProperty string) *JWTValidator {
 	return &JWTValidator{
 		userRepository:      userRepository,
 		tokenExpire:         tokenExpire,

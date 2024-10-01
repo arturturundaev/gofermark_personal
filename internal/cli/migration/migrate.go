@@ -20,7 +20,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db, err := sqlx.Open("postgres", config.DatabaseDSN)
+	db, err := sqlx.Open("postgres", config.Postgres.DSN)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}

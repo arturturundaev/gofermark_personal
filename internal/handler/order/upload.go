@@ -52,19 +52,21 @@ func (handler *OrderUploadHandler) Handler(ctx *gin.Context) {
 	}
 
 	err = handler.service.Create(*userID, strOrderNumber)
-	if err != nil {
-		if errors.Is(err, ErrExists) {
-			ctx.AbortWithStatus(http.StatusOK)
-			return
-		}
-		if errors.Is(err, ErrConflict) {
-			ctx.AbortWithStatus(http.StatusConflict)
-			return
-		}
-		handler.logger.Error("failed to create order", zap.String("error", err.Error()))
-		ctx.AbortWithStatus(http.StatusInternalServerError)
+	if err == nil {
+		ctx.AbortWithStatus(http.StatusAccepted)
+
 		return
 	}
 
-	ctx.AbortWithStatus(http.StatusAccepted)
+	if errors.Is(err, ErrExists) {
+		ctx.AbortWithStatus(http.StatusOK)
+		return
+	}
+	if errors.Is(err, ErrConflict) {
+		ctx.AbortWithStatus(http.StatusConflict)
+		return
+	}
+	handler.logger.Error("failed to create order", zap.String("error", err.Error()))
+	ctx.AbortWithStatus(http.StatusInternalServerError)
+	return
 }
